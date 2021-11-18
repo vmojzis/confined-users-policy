@@ -1,0 +1,9 @@
+policy_module(basic, 1.0)
+
+attribute login_confinedom;
+
+confinedom_base_user_login_template(basic)
+confined_transition_userdomain(init_t)
+confined_use_basic_commands(basic)
+confined_ssh_connect_template(basic)
+
