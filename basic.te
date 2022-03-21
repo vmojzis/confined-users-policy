@@ -2,8 +2,21 @@ policy_module(basic, 1.0)
 
 attribute login_confinedom;
 
-confinedom_base_user_login_template(basic)
+confinedom_networking_template(basic)
+confinedom_graphical_login_template(basic)
+confinedom_mozilla_usage_template(basic)
+confinedom_user_login_template(basic)
 confined_transition_userdomain(init_t)
-confined_use_basic_commands(basic)
+confined_use_basic_commands_template(basic)
+confinedom_basic_shared_dirs_template(basic)
 confined_ssh_connect_template(basic)
+confinedom_security_template_advanced(basic)
+confinedom_security_template_basic(basic)
+confinedom_sudo_template(basic)
+confined_xsession_spec_domtrans_conf_users(xdm_t)
+confinedom_admin_commands_template(basic)
+
+#
+#
+
 
