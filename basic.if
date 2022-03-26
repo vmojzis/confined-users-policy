@@ -14,25 +14,65 @@
 template(`confinedom_admin_commands_template',`
 
 
-	allow basic_t self:capability net_raw;
-	allow basic_t self:netlink_generic_socket create_socket_perms;
-	allow basic_t self:netlink_netfilter_socket create_socket_perms;
-	allow basic_t self:netlink_rdma_socket create_socket_perms;
-	allow basic_t self:packet_socket create_socket_perms;
+	allow $1_t self:capability net_raw;
+	allow $1_t self:netlink_generic_socket create_socket_perms;
+	allow $1_t self:netlink_netfilter_socket create_socket_perms;
+	allow $1_t self:netlink_rdma_socket create_socket_perms;
+	allow $1_t self:packet_socket create_socket_perms;
+	allow $1_t self:packet_socket map;
+	
+	allow $1_sudo_t $1_t:unix_stream_socket connectto;
 
-
+	#wireshark
+	allow $1_sudo_t self:bluetooth_socket create_socket_perms;
+	allow $1_sudo_t self:capability net_raw;
+	allow $1_sudo_t self:netlink_generic_socket create_socket_perms;
+	allow $1_sudo_t self:netlink_netfilter_socket create_socket_perms;
+	allow $1_sudo_t self:netlink_rdma_socket create_socket_perms;
+	allow $1_sudo_t self:packet_socket create_socket_perms;
+	allow $1_sudo_t self:packet_socket map;
+	
 	domain_getattr_all_domains($1_t)
 
+	#wireshark
+	dev_map_usbmon_dev($1_t)
+	dev_read_usbmon_dev($1_t)
+
+ 	#tuned systemctl start	
+	files_manage_non_auth_files($1_sudo_t)
+	files_read_all_symlinks($1_sudo_t)
+	
 	files_unconfined($1_t)
+
+	#tuned systemctl start 
+	init_create_pid_dirs($1_sudo_t)
+	init_read_state($1_sudo_t)
+	init_write_pid_socket($1_sudo_t)
+
+	iptables_run($1_t,$1_r)
+
+	logging_admin($1_t,$1_r)
+
+	# for wireshark saving
+	userdom_manage_user_home_content($1_sudo_t)
 
 	usermanage_domtrans_passwd($1_sudo_t)
 
-# work on wireshark
+#unused
+#	tuned_admin($1_sudo_t, $1_r)
+
+	optional_policy(`
+		tuned_dbus_chat($1_t)
+	')
+
+	#tuned systemctl start 
+#	systemd_config_systemd_services($1_sudo_t)
+
+	# work on wireshark
 	optional_policy(`
 		wireshark_role($1_r, $1_t)
 		wireshark_rw_shm($1_t)
 	')
-
 
 
 ')
@@ -115,9 +155,7 @@ template(`confinedom_graphical_login_template',`
 		storage_raw_write_removable_device($1_t)
 	')
 
-
 	kernel_read_device_sysctls($1_t)
-	kernel_request_load_module($1_t)
 	
 	miscfiles_watch_fonts_dirs($1_t)
 # miss	miscfiles_watch_localization_dirs($1_t)
@@ -404,10 +442,13 @@ template(`confinedom_user_login_template',`
 		')
 	')
 
+	term_create_pty($1_t, user_devpts_t)
 	term_use_all_terms($1_t)
+	term_user_pty($1_t, user_devpts_t)
 	term_use_virtio_console($1_t)
 
-	allow $1_t $1_t:capability { audit_write dac_read_search setgid setuid };
+	# chown cap is for cron
+	allow $1_t $1_t:capability { audit_write chown dac_read_search setgid setuid };
 	
 	allow $1_t $1_t:dbus acquire_svc;
 
@@ -450,7 +491,11 @@ template(`confinedom_user_login_template',`
 	kernel_dgram_send($1_t)
 	kernel_read_all_sysctls($1_t)
 	kernel_read_network_state($1_t)
+	kernel_request_load_module($1_t)
+#	not here use	
+#	kernel_request_load_module($1_sudo_t)
 	kernel_stream_connect($1_t)
+	
 
 	logging_send_syslog_msg($1_t)
 
@@ -477,12 +522,17 @@ template(`confinedom_user_login_template',`
 	systemd_dbus_chat_hostnamed($1_t)
 	systemd_exec_systemctl($1_t)
 	systemd_tmpfiles_exec($1_t)
+	systemd_passwd_watch_pid_dirs($1_t)
 	systemd_read_unit_files($1_t)
 
 	udev_read_pid_files($1_t)
 
 	optional_policy(`
 		bluetooth_dbus_chat($1_t)
+	')
+
+	optional_policy(`
+		cron_role($1_r, $1)
 	')
 
 	optional_policy(`
@@ -644,9 +694,13 @@ template(`confinedom_security_template_basic',`
 #
 template(`confinedom_sudo_template',`
 
+	kernel_request_load_module($1_sudo_t)
+
 	sudo_role_template($1,$1_r,$1_t)
+
 	ssh_use_ptys($1_sudo_t)
 
+	systemd_config_systemd_services($1_sudo_t)
 
 ')
 
