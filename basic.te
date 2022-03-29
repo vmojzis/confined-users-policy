@@ -2,21 +2,33 @@ policy_module(basic, 1.0)
 
 attribute login_confinedom;
 
+#allow basic network commands like ping, tracerout, ifconfig
 confinedom_networking_template(basic)
+#allow log in confined user into GUI, also user can set gnome settings a use gnome apps
 confinedom_graphical_login_template(basic)
-#confinedom_mozilla_usage_template(basic)
+#User can use web browser firefox and can add plugins
+confinedom_mozilla_usage_template(basic)
+#allow login into machine a get confined label
 confinedom_user_login_template(basic)
+#additional interface for log in confined user
 confined_transition_userdomain(init_t)
+#allow usage of basic commands like ls,cp,man, pasword setup, internet access, poweroff,reboot
 confined_use_basic_commands_template(basic)
+#allow to access to shared dirs
 confinedom_basic_shared_dirs_template(basic)
+#allow ssh conection into machine
 confined_ssh_connect_template(basic)
-#confinedom_security_template_advanced(basic)
+#allow advances selinux security like adding rules, changing context, working with semodule
+confinedom_security_template_advanced(basic)
+#allow basic selinux check like getsebool, sesearch, seinfo, sestatus
 confinedom_security_template_basic(basic)
-#confinedom_sudo_template(basic)
+#allow for confined user sudo
+confinedom_sudo_template(basic)
+#additional interface for graphic session
 confined_xsession_spec_domtrans_conf_users(xdm_t)
+#allow use admin tools like wireshark, tuned, cron, iptables, logging
 #confinedom_admin_commands_template(basic)
 
 #
 #
-
 
