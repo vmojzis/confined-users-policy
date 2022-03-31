@@ -1,0 +1,5 @@
+policy_module(confinedom, 1.0)
+
+attribute login_confinedom;
+
+

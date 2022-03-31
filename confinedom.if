@@ -1,0 +1,733 @@
+## <summary>Policy for user domains</summary>
+
+######################################
+## <summary>
+##  The template allow admin commands for confined user.
+##  Like vipw,passwd...
+## </summary>
+## <param name="domain">
+##  <summary>
+##  Domain allowed access.
+##  </summary>
+## </param>
+#
+template(`confinedom_admin_commands_template',`
+
+	allow $1_t self:capability net_raw;
+	allow $1_t self:netlink_generic_socket create_socket_perms;
+	allow $1_t self:netlink_netfilter_socket create_socket_perms;
+	allow $1_t self:netlink_rdma_socket create_socket_perms;
+	allow $1_t self:packet_socket create_socket_perms;
+	allow $1_t self:packet_socket map;
+	
+	allow $1_sudo_t $1_t:unix_stream_socket connectto;
+
+	#wireshark
+	allow $1_sudo_t self:bluetooth_socket create_socket_perms;
+	allow $1_sudo_t self:capability net_raw;
+	allow $1_sudo_t self:netlink_generic_socket create_socket_perms;
+	allow $1_sudo_t self:netlink_netfilter_socket create_socket_perms;
+	allow $1_sudo_t self:netlink_rdma_socket create_socket_perms;
+	allow $1_sudo_t self:packet_socket create_socket_perms;
+	allow $1_sudo_t self:packet_socket map;
+	
+	domain_getattr_all_domains($1_t)
+
+	#wireshark
+	dev_map_usbmon_dev($1_t)
+	dev_read_usbmon_dev($1_t)
+
+ 	#tuned systemctl start	
+	files_manage_non_auth_files($1_sudo_t)
+	files_read_all_symlinks($1_sudo_t)
+	
+	files_unconfined($1_t)
+
+	# systemd 
+        init_create_pid_dirs($1_sudo_t)
+        init_mmap_read_var_lib_files($1_sudo_t)
+        init_read_state($1_sudo_t)
+        init_write_pid_socket($1_sudo_t)
+
+	iptables_run($1_t,$1_r)
+
+	#wireshark cannot open /proc/net/dev
+	kernel_read_network_state($1_sudo_t)
+
+	logging_admin($1_t,$1_r)
+
+	# for wireshark saving
+	userdom_manage_user_home_content($1_sudo_t)
+
+	usermanage_domtrans_passwd($1_sudo_t)
+
+	optional_policy(`
+		tuned_dbus_chat($1_t)
+	')
+
+	# work on wireshark
+	optional_policy(`
+		wireshark_role($1_r, $1_t)
+		wireshark_rw_shm($1_t)
+	')
+
+')
+
+######################################
+## <summary>
+##  The template allow managing basic networking for confined user.
+##  Like ip,ifconfig,traceroute,tcpdump.
+## </summary>
+## <param name="domain">
+##  <summary>
+##  Domain allowed access.
+##  </summary>
+## </param>
+#
+template(`confinedom_networking_template',`
+
+	optional_policy(`
+		netutils_run_ping_cond($1_t, $1_r)
+		netutils_run_traceroute_cond($1_t, $1_r)
+	')
+')
+
+######################################
+## <summary>
+##  The template allow graphical login for confined user.
+## </summary>
+## <param name="domain">
+##  <summary>
+##  Domain allowed access.
+##  </summary>
+## </param>
+#
+template(`confinedom_graphical_login_template',`
+	gen_require(`
+		type $1_t, user_tmpfs_t;
+	')
+
+	corecmd_bin_entry_type($1_t)	
+
+	corenet_tcp_connect_all_ports($1_t)
+
+	allow $1_t $1_t:process { execmem getattr setrlimit };
+	
+	allow $1_t $1_t:system all_system_perms;
+
+	allow $1_t $1_t:netlink_kobject_uevent_socket read;
+
+	dev_write_sound($1_t)
+	dev_read_sound($1_t)
+	dev_rw_inherited_input_dev($1_t)
+	dev_read_video_dev($1_t)
+	dev_write_video_dev($1_t)
+	dev_rw_wireless($1_t)
+	dev_watch_generic_dirs($1_t)
+
+	files_read_config_files($1_t)
+	files_watch_etc_dirs($1_t)
+	files_watch_home($1_t)
+	files_watch_lib_dirs($1_t)
+# miss	files_watch_system_conf_dirs($1_t)
+	files_watch_usr_dirs($1_t)
+	files_watch_usr_files($1_t)
+	files_watch_var_lib_dirs($1_t)
+	files_watch_var_run_dirs($1_t)
+	files_watch_generic_tmp_dirs($1_t)
+
+	init_rw_stream_sockets($1_t)
+
+	tunable_policy(`selinuxuser_rw_noexattrfile',`
+		dev_rw_usbfs($1_t)
+		dev_rw_generic_usb_dev($1_t)
+
+		fs_manage_noxattr_fs_files($1_t)
+		fs_manage_noxattr_fs_dirs($1_t)
+		fs_manage_dos_dirs($1_t)
+		fs_manage_dos_files($1_t)
+		storage_raw_read_removable_device($1_t)
+		storage_raw_write_removable_device($1_t)
+	')
+
+	kernel_read_device_sysctls($1_t)
+	
+	miscfiles_watch_fonts_dirs($1_t)
+# miss	miscfiles_watch_localization_dirs($1_t)
+	miscfiles_watch_localization_symlinks($1_t)
+
+	mount_signal($1_t)
+
+	seutil_read_default_contexts($1_t)	
+
+	storage_rw_fuse($1_t)
+
+	userdom_execute_user_tmp_files($1_t)
+	userdom_manage_home_role($1_r,$1_t)
+	userdom_manage_user_home_dirs($1_t)
+
+	xserver_restricted_role($1_r,$1_t)
+
+	optional_policy(`
+		alsa_read_lib($1_t)
+	')
+
+#	optional_policy(`
+		#missing, dontaudit
+		#gnome_exec_atspi($1_t)
+#	')
+
+	optional_policy(`
+		fwupd_manage_cache_dirs($1_t)
+	')
+
+# missing
+#	optional_policy(`
+#		dbus_watch_config($1_t)
+#	')
+
+	        optional_policy(`
+
+		dbus_connect_system_bus($1_t)
+		dbus_create_session_tmp_sock_files($1_t)
+		dbus_role_template($1, $1_r, $1_t)
+		dbus_system_bus_client($1_t)
+		dbus_write_session_tmp_sock_files($1_t)
+
+		allow $1_t $1_t:dbus send_msg;
+
+		optional_policy(`
+			accountsd_dbus_chat($1_t)
+		')
+
+                optional_policy(`
+                        avahi_dbus_chat($1_t)
+                ')
+
+                optional_policy(`
+                        bluetooth_dbus_chat($1_t)
+                ')
+
+		optional_policy(`
+			colord_dbus_chat($1_t)
+		')
+
+		optional_policy(`
+			consolekit_dbus_chat($1_t)
+			consolekit_read_log($1_t)
+                ')
+
+		optional_policy(`
+			devicekit_dbus_chat($1_t)
+			devicekit_dbus_chat_power($1_t)
+			devicekit_dbus_chat_disk($1_t)
+		')
+
+		optional_policy(`
+			evolution_dbus_chat($1_t)
+			evolution_alarm_dbus_chat($1_t)
+		')
+
+		optional_policy(`
+			firewalld_dbus_chat($1_t)
+		')
+
+		optional_policy(`
+			geoclue_dbus_chat($1_t)
+		')
+
+		optional_policy(`
+			gnome_dbus_chat_gconfdefault($1_t)
+		')
+
+		optional_policy(`
+			fprintd_dbus_chat($1_t)
+		')
+
+		optional_policy(`
+			fwupd_dbus_chat($1_t)
+		')
+	
+		optional_policy(`
+			hwloc_exec_dhwd($1_t)
+			hwloc_read_runtime_files($1_t)
+		')
+
+		optional_policy(`
+			memcached_stream_connect($1_t)
+		')
+
+		optional_policy(`
+			modemmanager_dbus_chat($1_t)
+		')
+
+		optional_policy(`
+			networkmanager_dbus_chat($1_t)
+			networkmanager_read_lib_files($1_t)
+		')
+
+		optional_policy(`
+			policykit_dbus_chat($1_t)
+		')
+
+		optional_policy(`
+			rpm_dbus_chat($1_t)
+		')
+
+		optional_policy(`
+			vpn_dbus_chat($1_t)
+		')
+	')
+                                         
+	optional_policy(`
+                rpm_read_db($1_t)
+	')
+
+	optional_policy(`
+		systemd_dbus_chat_logind($1_t)
+		systemd_dbus_chat_timedated($1_t)
+		systemd_dbus_chat_hostnamed($1_t)
+		systemd_dbus_chat_localed($1_t)
+		systemd_config_all_services($1_t)
+		systemd_login_watch_pid_dirs($1_t)
+		systemd_login_watch_session_dirs($1_t)
+		systemd_machined_watch_pid_dirs($1_t)
+		systemd_read_logind_sessions_files($1_t)
+		systemd_write_inhibit_pipes($1_t)
+	')
+
+	optional_policy(`
+		cups_stream_connect($1_t)
+        ')
+
+
+	optional_policy(`
+		mount_run_fusermount($1_t, $1_r)
+		mount_read_pid_files($1_t)
+	')
+
+	optional_policy(`
+		pulseaudio_role($1_r, $1_t)
+		pulseaudio_filetrans_home_content($1_t)
+	')
+
+	optional_policy(`
+		vdagent_getattr_log($1_t)
+		vdagent_stream_connect($1_t)
+	')
+
+#issue with sid labeling	
+#	optional_policy(`
+#		vmtools_domtrans($1_t)
+#	')
+
+	optional_policy(`
+		rtkit_scheduled($1_t)
+	')
+')
+
+######################################
+## <summary>
+##  The template allow mozilla firefox usage for confined user.
+## </summary>
+## <param name="domain">
+##  <summary>
+##  Domain allowed access.
+##  </summary>
+## </param>
+#
+template(`confinedom_mozilla_usage_template',`
+
+	gen_require(`
+		type mozilla_t, mozilla_exec_t, mozilla_home_t, mozilla_tmpfs_t;
+		attribute_role mozilla_roles;
+	')
+	
+	role $1_r;
+
+	optional_policy(`
+		allow $1_t mozilla_t:process { noatsecure siginh rlimitinh };
+		
+		ps_process_pattern($1_t, mozilla_t)
+		allow $1_t mozilla_t:process signal_perms;
+
+		allow $1_t mozilla_t:fd use;
+		allow $1_t mozilla_t:shm { associate getattr };
+		allow $1_t mozilla_t:shm { unix_read unix_write };
+		allow $1_t mozilla_t:unix_stream_socket connectto;
+
+		mozilla_run_plugin($1_t, $1_r)
+		mozilla_dbus_chat($1_t)
+
+		mozilla_filetrans_home_content($1_t)
+
+		')
+
+')
+
+#######################################
+## <summary>
+##	The template containing the most basic rules common to all users.
+## </summary>
+## <desc>
+##	<p>
+##	The template containing the most basic rules common to all users.
+##	</p>
+##	<p>
+##	This template creates a user domain, types, and
+##	rules for the user's tty and pty.
+##	</p>
+## </desc>
+## <param name="userdomain_prefix">
+##	<summary>
+##	The prefix of the user domain (e.g., basic
+##	is the prefix for basic_t).
+##	</summary>
+## </param>
+## <rolebase/>
+#
+template(`confinedom_user_login_template',`
+
+	gen_require(`
+		attribute userdomain, login_confinedom;
+		type user_devpts_t, user_tty_device_t;
+		class dbus acquire_svc;
+		class context contains;
+	')
+
+	type $1_t;
+	typeattribute $1_t login_confinedom;
+	typeattribute $1_t userdomain;
+	corecmd_shell_entry_type($1_t)
+	domain_type($1_t)
+	domain_user_exemption_target($1_t)
+	ubac_constrained($1_t)
+	role $1_r;
+	role $1_r types $1_t;
+	allow system_r $1_r;
+
+	userdom_filetrans_home_content($1_t)
+	userdom_manage_tmp_dirs($1_t)
+	userdom_manage_tmp_sockets($1_t)
+	userdom_manage_tmp_role($1_r, $1_t)
+	userdom_manage_user_home_content($1_t)
+	userdom_manage_user_tmp_chr_files(login_confinedom)
+	userdom_manage_user_tmp_pipes($1_t)
+	userdom_user_home_content($1_t)
+
+	ifelse(`$1',`unconfined',`',`
+		gen_tunable(`$1_exec_content', true)
+
+		tunable_policy(`$1_exec_content',`
+			userdom_exec_user_tmp_files($1_t)
+			userdom_exec_user_home_content_files($1_t)
+		')
+		tunable_policy(`$1_exec_content && use_nfs_home_dirs',`
+			fs_exec_nfs_files($1_t)
+		')
+		
+		tunable_policy(`$1_exec_content && use_samba_home_dirs',`
+			fs_exec_cifs_files($1_t)
+		')
+	')
+
+	term_create_pty($1_t, user_devpts_t)
+	term_use_all_terms($1_t)
+	term_user_pty($1_t, user_devpts_t)
+	term_use_virtio_console($1_t)
+
+	# chown cap is for cron
+	allow $1_t $1_t:capability { audit_write chown dac_read_search setgid setuid };
+	
+	allow $1_t $1_t:dbus acquire_svc;
+
+	allow $1_t $1_t:process { setcap setfscreate setsched setsockcreate };
+
+	tunable_policy(`deny_bluetooth',`',`
+		allow $1_t self:bluetooth_socket create_stream_socket_perms;
+    	')
+
+	allow $1_t $1_t:netlink_audit_socket { nlmsg_relay nlmsg_write create_netlink_socket_perms };
+	allow $1_t $1_t:netlink_kobject_uevent_socket { bind create getattr getopt setopt };
+	allow $1_t $1_t:unix_dgram_socket { bind connect create getopt ioctl sendto setopt };
+	allow $1_t $1_t:unix_stream_socket connectto;
+
+	allow $1_t $1_t:context contains;
+
+	application_exec_all($1_t)
+	
+	auth_domtrans_chkpwd($1_t)
+	auth_read_passwd($1_t)
+	auth_use_nsswitch($1_t)
+
+	files_dontaudit_manage_boot_dirs($1_t)
+	files_dontaudit_manage_boot_files($1_t)		
+
+	fs_getattr_cgroup($1_t)
+	fs_getattr_all_dirs($1_t)
+	fs_getattr_tmpfs($1_t)
+	fs_getattr_xattr_fs($1_t)
+	fs_manage_cgroup_dirs($1_t)
+	fs_manage_cgroup_files($1_t)
+	fs_read_tmpfs_files($1_t)
+	fs_search_all($1_t)
+
+	init_entrypoint_exec($1_t)
+	init_exec($1_t)
+	init_status($1_t)
+
+	kernel_dgram_send($1_t)
+	kernel_read_all_sysctls($1_t)
+	kernel_read_network_state($1_t)
+	kernel_request_load_module($1_t)
+	kernel_stream_connect($1_t)
+	
+	logging_send_syslog_msg($1_t)
+
+	miscfiles_watch_localization_symlinks($1_t)
+
+	mount_read_pid_files($1_t)
+	mount_watch_pid_dirs($1_t)
+	
+	dev_getattr_sound_dev($1_t)
+	dev_read_sysfs($1_t)
+
+	domain_read_all_domains_state($1_t)
+	
+	selinux_compute_access_vector($1_t)
+	selinux_compute_create_context($1_t)
+	selinux_get_enforce_mode($1_t)
+
+	seutil_read_config($1_t)
+	seutil_read_file_contexts($1_t)
+	
+	storage_getattr_fixed_disk_dev($1_t)
+		
+	systemd_dbus_chat_hostnamed($1_t)
+	systemd_exec_systemctl($1_t)
+	systemd_tmpfiles_exec($1_t)
+	systemd_passwd_watch_pid_dirs($1_t)
+	systemd_read_unit_files($1_t)
+
+	udev_read_pid_files($1_t)
+
+	optional_policy(`
+		bluetooth_dbus_chat($1_t)
+	')
+
+	optional_policy(`
+		cron_role($1_r, $1)
+	')
+
+	optional_policy(`
+		dbus_create_session_tmp_sock_files($1_t)
+		dbus_send_system_bus($1_t)
+		dbus_role_template($1_t, $1_r, $1_t)
+		dbus_write_session_tmp_sock_files($1_t)
+	')
+
+	optional_policy(`
+		gnome_role_template($1, $1_r, $1_t)
+	')
+
+	optional_policy(`
+		locate_read_lib_files($1_t)
+	')
+	
+	optional_policy(`
+		mta_getattr_spool($1_t)
+	')
+	
+')
+
+########################################
+## <summary>
+##      Allow caller to transition to confined userdomain.
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain which need allow access.
+##      </summary>
+## </param>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`confined_transition_userdomain',`
+      gen_require(`
+                attribute login_confinedom;
+        ')        
+	allow $1 login_confinedom:process transition;
+')
+
+########################################
+## <summary>
+##      Allow caller to use basic command for confined user.
+##	For example:
+##	- date, ls, ps, man 
+##	- systemctl -user, journalctl -user 
+##	- password setup, update, with a password policy in place
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain which need allow access.
+##      </summary>
+## </param>
+## <param name="domain">
+##      <summary>
+##      Domain allowed access.
+##      </summary>
+## </param>
+#
+interface(`confined_use_basic_commands_template',`
+      gen_require(`
+                type init_var_lib_t;
+		attribute login_confinedom;
+        ')
+
+	allow $1_t $1_t:process setpgid;
+
+	allow $1_t $1_t:system status;
+
+ 	init_mmap_read_var_lib_files($1_t)
+	init_signal($1_t)
+#set as last step possible it is for top tool or seeing all process 
+#	domain_dontaudit_read_all_domains_state($1_t)
+
+	logging_read_generic_logs($1_t)
+	logging_read_syslog_pid($1_t)
+
+	systemd_status_all_unit_files($1_t)		
+
+	optional_policy(`
+		clock_read_adjtime($1_t)
+	')
+
+	optional_policy(`
+		mandb_map_cache_files($1_t)
+	')
+
+	optional_policy(`
+		usermanage_run_passwd($1_t,$1_r)
+	')
+
+')
+
+######################################
+## <summary>
+##  The template allow manage advanced selinux security for confined user
+##  which allow managing SELinux mechanisms.
+## </summary>
+## <param name="domain">
+##  <summary>
+##  Domain allowed access.
+##  </summary>
+## </param>
+#
+template(`confinedom_security_template_advanced',`
+
+	logging_read_audit_log($1_t)
+	logging_read_audit_config($1_t)
+
+	selinux_set_enforce_mode($1_t)
+	selinux_set_all_booleans($1_t)
+        
+	seutil_dbus_chat_semanage($1_t)
+	seutil_manage_module_store($1_t)
+	seutil_read_login_config($1_t)
+	seutil_run_semanage($1_sudo_t,$1_r)
+	seutil_run_newrole($1_t, $1_r)
+	seutil_domtrans_setfiles($1_sudo_t)
+
+        optional_policy(`
+                userhelper_role_template($1,$1_r,$1_t)
+        ')
+
+')
+
+######################################
+## <summary>
+##  The template allow manage basic selinux security for confined user.
+##  Like seinfo, getsebool and sesearch.
+## </summary>
+## <param name="domain">
+##  <summary>
+##  Domain allowed access.
+##  </summary>
+## </param>
+#
+template(`confinedom_security_template_basic',`
+
+	selinux_load_policy($1_t)
+	selinux_read_policy($1_t)
+
+')
+
+######################################
+## <summary>
+##  The template allow sudo for confined user.
+## </summary>
+## <param name="domain">
+##  <summary>
+##  Domain allowed access.
+##  </summary>
+## </param>
+#
+template(`confinedom_sudo_template',`
+
+	kernel_request_load_module($1_sudo_t)
+
+	sudo_role_template($1,$1_r,$1_t)
+
+	ssh_use_ptys($1_sudo_t)
+
+	## systemctl status, restart... of services
+	systemd_config_all_services($1_sudo_t)
+
+')
+
+######################################
+## <summary>
+##  The template allow ssh connection.
+## </summary>
+## <param name="domain">
+##  <summary>
+##  Domain allowed access.
+##  </summary>
+## </param>
+#
+template(`confined_ssh_connect_template',`
+	
+	ssh_dyntransition_to($1_t)
+	term_use_ptmx($1_t)
+	
+	ssh_use_ptys($1_t)
+	ssh_role_template($1, $1_r, $1_t)
+
+')
+
+########################################
+## <summary>
+##      Execute an Xserver session in all confined user domains.  This
+##      is an explicit transition, requiring the
+##      caller to use setexeccon().
+## </summary>
+## <param name="domain">
+##      <summary>
+##      Domain allowed to transition.
+##      </summary>
+## </param>
+#
+interface(`confined_xsession_spec_domtrans_conf_users',`
+        gen_require(`
+                attribute login_confinedom;
+        ')
+
+        xserver_xsession_spec_domtrans($1,login_confinedom)
+        allow login_confinedom $1:fd use;
+        allow login_confinedom $1:fifo_file rw_file_perms;
+        allow login_confinedom $1:process sigchld;
+')
+
