@@ -1,7 +1,5 @@
 # Confined-users-policy
-This is repository, where will be implementation of diploma thesis practical output. The SELinux policies for new confined users.
-
-The security policies are under Apache 2.0 license.
+This is repository, where will be implementation of diploma thesis practical output. The SELinux policies for new confined users. The security policies are under Apache 2.0 license.
 
 # How to apply policy on system
 
