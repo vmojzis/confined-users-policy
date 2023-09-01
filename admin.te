@@ -15,7 +15,7 @@ confined_use_basic_commands_template(admin)
 #allow ssh conection into machine
 confined_ssh_connect_template(admin)
 #allow advances selinux security like adding rules, changing context, working with semodule
-confinedom_security_template_admin(admin)
+confinedom_security_template_advanced(admin)
 #allow basic selinux check like getsebool, sesearch, seinfo, sestatus
 confinedom_security_template_basic(admin)
 #allow for confined user sudo
