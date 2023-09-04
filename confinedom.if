@@ -12,6 +12,10 @@
 ## </param>
 #
 template(`confinedom_admin_commands_template',`
+	gen_require(`
+		role $1_r;
+		type $1_t, $1_sudo_t;
+	')
 
 	allow $1_t self:capability net_raw;
 	allow $1_t self:netlink_generic_socket create_socket_perms;
@@ -85,8 +89,12 @@ template(`confinedom_admin_commands_template',`
 ## </param>
 #
 template(`confinedom_networking_template',`
-
 	optional_policy(`
+		gen_require(`
+			role $1_r;
+			type $1_t;
+		')
+
 		netutils_run_ping_cond($1_t, $1_r)
 		netutils_run_traceroute_cond($1_t, $1_r)
 	')
@@ -105,6 +113,7 @@ template(`confinedom_networking_template',`
 template(`confinedom_graphical_login_template',`
 	gen_require(`
 		type $1_t, user_tmpfs_t;
+		role $1_r;
 	')
 
 	corecmd_bin_entry_type($1_t)	
@@ -341,9 +350,9 @@ template(`confinedom_mozilla_usage_template',`
 	gen_require(`
 		type mozilla_t, mozilla_exec_t, mozilla_home_t, mozilla_tmpfs_t;
 		attribute_role mozilla_roles;
+		role $1_r;
+		type $1_t;
 	')
-	
-	role $1_r;
 
 	optional_policy(`
 		allow $1_t mozilla_t:process { noatsecure siginh rlimitinh };
@@ -361,7 +370,7 @@ template(`confinedom_mozilla_usage_template',`
 
 		mozilla_filetrans_home_content($1_t)
 
-		')
+	')
 
 ')
 
@@ -558,7 +567,7 @@ template(`confinedom_user_login_template',`
 interface(`confined_transition_userdomain',`
       gen_require(`
                 attribute login_confinedom;
-        ')        
+      ')
 	allow $1 login_confinedom:process transition;
 ')
 
@@ -582,10 +591,11 @@ interface(`confined_transition_userdomain',`
 ## </param>
 #
 interface(`confined_use_basic_commands_template',`
-      gen_require(`
-                type init_var_lib_t;
+	gen_require(`
+		type init_var_lib_t, $1_t;
 		attribute login_confinedom;
-        ')
+		role $1_r;
+	')
 
 	allow $1_t $1_t:process setpgid;
 
@@ -627,6 +637,10 @@ interface(`confined_use_basic_commands_template',`
 ## </param>
 #
 template(`confinedom_security_template_advanced',`
+	gen_require(`
+		role $1_r;
+		type $1_t, $1_sudo_t;
+	')
 
 	logging_read_audit_log($1_t)
 	logging_read_audit_config($1_t)
@@ -659,6 +673,9 @@ template(`confinedom_security_template_advanced',`
 ## </param>
 #
 template(`confinedom_security_template_basic',`
+	gen_require(`
+		type $1_t;
+	')
 
 	selinux_load_policy($1_t)
 	selinux_read_policy($1_t)
@@ -676,6 +693,10 @@ template(`confinedom_security_template_basic',`
 ## </param>
 #
 template(`confinedom_sudo_template',`
+	gen_require(`
+		role $1_r;
+		type $1_t, $1_sudo_t;
+	')
 
 	kernel_request_load_module($1_sudo_t)
 
@@ -699,7 +720,11 @@ template(`confinedom_sudo_template',`
 ## </param>
 #
 template(`confined_ssh_connect_template',`
-	
+	gen_require(`
+		role $1_r;
+		type $1_t;
+	')
+
 	ssh_dyntransition_to($1_t)
 	term_use_ptmx($1_t)
 	
