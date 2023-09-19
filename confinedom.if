@@ -89,15 +89,13 @@ template(`confinedom_admin_commands_template',`
 ## </param>
 #
 template(`confinedom_networking_template',`
-	optional_policy(`
-		gen_require(`
-			role $1_r;
-			type $1_t;
-		')
-
-		netutils_run_ping_cond($1_t, $1_r)
-		netutils_run_traceroute_cond($1_t, $1_r)
+	gen_require(`
+		role $1_r;
+		type $1_t;
 	')
+
+	netutils_run_ping_cond($1_t, $1_r)
+	netutils_run_traceroute_cond($1_t, $1_r)
 ')
 
 ######################################
@@ -531,7 +529,7 @@ template(`confinedom_user_login_template',`
 	optional_policy(`
 		dbus_create_session_tmp_sock_files($1_t)
 		dbus_send_system_bus($1_t)
-		dbus_role_template($1_t, $1_r, $1_t)
+		dbus_role_template($1, $1_r, $1_t)
 		dbus_write_session_tmp_sock_files($1_t)
 	')
 
