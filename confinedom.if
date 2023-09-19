@@ -753,4 +753,3 @@ interface(`confined_xsession_spec_domtrans_conf_users',`
         allow login_confinedom $1:fifo_file rw_file_perms;
         allow login_confinedom $1:process sigchld;
 ')
-

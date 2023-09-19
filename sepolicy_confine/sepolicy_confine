@@ -1,0 +1,91 @@
+#!/usr/bin/python3 -EsI
+# Copyright (C) 2023 Red Hat
+# AUTHOR: Vit Mojzis <vmojzis@redhat.com>
+# see file 'COPYING' for use and warranty information
+#
+# semanage is a tool for managing SELinux configuration files
+#
+#    This program is free software; you can redistribute it and/or
+#    modify it under the terms of the GNU General Public License as
+#    published by the Free Software Foundation; either version 2 of
+#    the License, or (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
+#                                        02111-1307  USA
+#
+#
+
+import argparse
+import os
+import re
+import seobject
+import sys
+import traceback
+
+macro_calls = {
+    "admin_commands": ("(call confinedom_admin_commands_macro ({}))", ("_t", "_r", "_sudo_t")),
+    "graphical_login": ("(call confinedom_graphical_login_macro ({}))", ("_t", "_r", "_dbus_t")),
+    "mozilla_usage": ("(call confinedom_mozilla_usage_macro ({}))", ("_t", "_r")),
+    "networking": ("(call confinedom_networking_macro ({}))", ("_t", "_r")),
+    "security_advanced": ("(call confinedom_security_advanced_macro ({}))", ("_t", "_r", "_sudo_t", "_userhelper_t")),
+    "security_basic": ("(call confinedom_security_basic_macro ({}))", ("_t", "_r")),
+    "sudo": ("(call confinedom_sudo_macro ({}))", ("_t", "_r", "_sudo_t", "_sudo_tmp_t")),
+    "user_login": ("(call confinedom_user_login_macro ({}))", ("_t", "_r", "_gkeyringd_t", "_dbus_t", "_exec_content")),
+    "ssh_connect": ("(call confined_ssh_connect_macro ({}))", ("_t", "_r", "_ssh_agent_t")),
+    "basic_commands": ("(call confined_use_basic_commands_macro ({}))", ("_t", "_r"))
+}
+
+typedefs = {
+    "_t": "(type {}_t)",
+    "_r": "(role {}_r)",
+    "_dbus_t": "(type {}_dbus_t)",
+    "_gkeyringd_t": "(type {}_gkeyringd_t)",
+    "_ssh_agent_t": "(type {}_ssh_agent_t)",
+    "_sudo_t": "(type {}_sudo_t)",
+    "_sudo_tmp_t": "(type {}_sudo_tmp_t)",
+    "_userhelper_t": "(type {}_userhelper_t)",
+    "_exec_content": "(boolean {}_exec_content true)"
+}
+
+
+parser = argparse.ArgumentParser(
+    prog="sepolicy_confine",
+    description="SELinux confined user policy generator"
+)
+
+parser.add_argument("-a", "--admin_commands", action='store_true', default=False,dest="admin_commands")
+parser.add_argument("-g", "--graphical_login", action='store_true', default=False,dest="graphical_login")
+parser.add_argument("-m", "--mozilla_usage", action='store_true', default=False,dest="mozilla_usage")
+parser.add_argument("-n", "--networking", action='store_true', default=False,dest="networking")
+parser.add_argument("-d", "--security_advanced", action='store_true', default=False,dest="security_advanced")
+parser.add_argument("-i", "--security_basic", action='store_true', default=False,dest="security_basic")
+parser.add_argument("-s", "--sudo", action='store_true', default=False,dest="sudo")
+parser.add_argument("-l", "--user_login", action='store_true', default=False,dest="user_login")
+parser.add_argument("-c", "--ssh_connect", action='store_true', default=False,dest="ssh_connect")
+parser.add_argument("-b", "--basic_commands", action='store_true', default=False,dest="basic_commands")
+parser.add_argument("uname")
+
+args = parser.parse_args()
+
+policy = ""
+defs = set()
+
+for arg, value in vars(args).items():
+    #getattr(args, arg)
+    if not value or arg not in macro_calls.keys():
+        continue
+    call = macro_calls[arg][0]
+    for param in macro_calls[arg][1]:
+        defs.add(typedefs[param].format(args.uname))
+    policy += '\n' + (macro_calls[arg][0].format(" ".join([args.uname + s for s in macro_calls[arg][1]])))
+    #print("{}: {}".format(arg, value))
+
+policy = '\n'.join(sorted(defs)) + policy
+print(policy)

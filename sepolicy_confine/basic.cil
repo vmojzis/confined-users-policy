@@ -1,0 +1,52 @@
+(type u_t)
+(role u_r)
+(type u_dbus_t)
+(type u_gkeyringd_t)
+(type u_ssh_agent_t)
+(boolean u_exec_content true)
+
+;#allow basic network commands like ping, tracerout, ifconfig
+;confinedom_networking_template(basic)
+(call confinedom_networking_macro (u_t u_r))
+;#allow log in confined user into GUI, also user can set gnome settings a use gnome apps
+;confinedom_graphical_login_template(basic)
+(call confinedom_graphical_login_macro (u_t u_r u_dbus_t))
+;#User can use web browser firefox and can add plugins
+;confinedom_mozilla_usage_template(basic)
+(call confinedom_mozilla_usage_macro (u_t u_r))
+;#allow login into machine a get confined label
+;confinedom_user_login_template(basic)
+(call confinedom_user_login_macro (u_t u_r u_gkeyringd_t u_dbus_t u_exec_content))
+;#additional interface for log in confined user
+;confined_transition_userdomain(init_t)
+;#allow usage of basic commands like ls,cp,man, pasword setup, internet access, poweroff,reboot
+;confined_use_basic_commands_template(basic)
+(call confined_use_basic_commands_macro (u_t u_r))
+;#allow ssh conection into machine
+;confined_ssh_connect_template(basic)
+(call confined_ssh_connect_macro (u_t u_r u_ssh_agent_t))
+;#allow advances selinux security like adding rules, changing context, working with semodule
+;#confinedom_security_template_advanced(basic)
+;(call confinedom_security_advanced_macro (u_t u_r u_sudo_t u_userhelper_t))
+;#allow basic selinux check like getsebool, sesearch, seinfo, sestatus
+;#confinedom_security_template_basic(basic)
+;(call confinedom_security_basic_macro (u_t u_r))
+;#allow for confined user sudo
+;#confinedom_sudo_template(basic)
+;#additional interface for graphic session
+;confined_xsession_spec_domtrans_conf_users(xdm_t)
+;#allow use admin tools like wireshark, tuned, cron, iptables, logging
+;#confinedom_admin_commands_template(basic)
+;confined_transition_userdomain(init_t)
+;confined_xsession_spec_domtrans_conf_users(xdm_t)
+
+;(call confinedom_admin_commands_macro (u_t u_r u_sudo_t))
+;(call confinedom_graphical_login_macro (u_t u_r u_dbus_t))
+;(call confinedom_mozilla_usage_macro (u_t u_r))
+;(call confinedom_networking_macro (u_t u_r))
+;(call confinedom_security_advanced_macro (u_t u_r u_sudo_t u_userhelper_t))
+;(call confinedom_security_basic_macro (u_t u_r))
+;(call confinedom_sudo_macro (u_t u_r u_sudo_t u_sudo_tmp_t))
+;(call confinedom_user_login_macro (u_t u_r u_dbus_t u_gkeyringd_t u_exec_content))
+;(call confined_ssh_connect_macro (u_t u_r u_ssh_agent_t))
+;(call confined_use_basic_commands_macro (u_t u_r))
