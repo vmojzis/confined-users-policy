@@ -70,12 +70,34 @@ parser.add_argument("-s", "--sudo", action='store_true', default=False,dest="sud
 parser.add_argument("-l", "--user_login", action='store_true', default=False,dest="user_login")
 parser.add_argument("-c", "--ssh_connect", action='store_true', default=False,dest="ssh_connect")
 parser.add_argument("-b", "--basic_commands", action='store_true', default=False,dest="basic_commands")
+parser.add_argument("--level", nargs='?', default="s0", dest="level")
+parser.add_argument("--range", nargs='?', default="s0", dest="range")
 parser.add_argument("uname")
 
 args = parser.parse_args()
 
-policy = ""
+# MCS/MLS range handling - needs to be separated into range_l and range_h
+mcs_range = args.range
+mls_range = ""
+if ':' in args.range:
+    (mcs_range, mls_range) = args.range.split(":")
+if '-' in mcs_range:
+    (range_l, range_h) = mcs_range.split("-")
+else:
+    range_l = mcs_range
+    range_h = range_l
+if mls_range != "":
+    range_l += ":" + mls_range
+    range_h += ":" + mls_range
+
 defs = set()
+
+policy = """
+(user {uname}_u)
+(userrole {uname}_u {uname}_r)
+(userlevel {uname}_u ({level} ))
+(userrange {uname}_u (({range_l} ) ({range_h} )))
+""".format(uname=args.uname, level=args.level, range_l=range_l, range_h=range_h)
 
 for arg, value in vars(args).items():
     #getattr(args, arg)
@@ -88,6 +110,7 @@ for arg, value in vars(args).items():
     #print("{}: {}".format(arg, value))
 
 policy = '\n'.join(sorted(defs)) + policy
+
 with open("{}.cil".format(args.uname), 'w') as f:
     f.write(policy)
 
