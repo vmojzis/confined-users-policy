@@ -54,22 +54,25 @@ typedefs = {
     "_exec_content": "(boolean {}_exec_content true)"
 }
 
-
 parser = argparse.ArgumentParser(
     prog="sepolicy_confine",
     description="SELinux confined user policy generator"
 )
 
-parser.add_argument("-a", "--admin_commands", action='store_true', default=False,dest="admin_commands")
-parser.add_argument("-g", "--graphical_login", action='store_true', default=False,dest="graphical_login")
-parser.add_argument("-m", "--mozilla_usage", action='store_true', default=False,dest="mozilla_usage")
-parser.add_argument("-n", "--networking", action='store_true', default=False,dest="networking")
-parser.add_argument("-d", "--security_advanced", action='store_true', default=False,dest="security_advanced")
-parser.add_argument("-i", "--security_basic", action='store_true', default=False,dest="security_basic")
-parser.add_argument("-s", "--sudo", action='store_true', default=False,dest="sudo")
-parser.add_argument("-l", "--user_login", action='store_true', default=False,dest="user_login")
-parser.add_argument("-c", "--ssh_connect", action='store_true', default=False,dest="ssh_connect")
-parser.add_argument("-b", "--basic_commands", action='store_true', default=False,dest="basic_commands")
+parser.add_argument("-a", "--admin_commands", action='store_true',
+                    default=False, dest="admin_commands",
+                    help="Use administrative commands (vipw, passwd, ...)")
+parser.add_argument("-g", "--graphical_login", action='store_true',
+                    default=False,dest="graphical_login",
+                    help="Use graphical login environment")
+parser.add_argument("-m", "--mozilla_usage", action='store_true', default=False,dest="mozilla_usage", help="Use mozilla firefox")
+parser.add_argument("-n", "--networking", action='store_true', default=False,dest="networking", help="Manage basic networking (ip, ifconfig, traceroute, tcpdump, ...)")
+parser.add_argument("-d", "--security_advanced", action='store_true', default=False,dest="security_advanced", help="Manage SELinux settings (semanage, semodule, sepolicy, ...)")
+parser.add_argument("-i", "--security_basic", action='store_true', default=False,dest="security_basic", help="Use read-only security-related tools (seinfo, getsebool, sesearch, ...)")
+parser.add_argument("-s", "--sudo", action='store_true', default=False,dest="sudo", help="Run commands as root using sudo")
+parser.add_argument("-l", "--user_login", action='store_true', default=False,dest="user_login", help="Basic rules common to all users (tty, pty, ...)")
+parser.add_argument("-c", "--ssh_connect", action='store_true', default=False,dest="ssh_connect", help="Connect over SSH")
+parser.add_argument("-b", "--basic_commands", action='store_true', default=False,dest="basic_commands", help="Use basic commands (date, ls, ps, man, systemctl -user, journalctl -user, passwd, ...)")
 parser.add_argument("--level", nargs='?', default="s0", dest="level")
 parser.add_argument("--range", nargs='?', default="s0-s0:c0.c1023", dest="range")
 parser.add_argument("uname")
@@ -79,7 +82,6 @@ args = parser.parse_args()
 # MCS/MLS range handling - needs to be separated into up-to 4 parts
 # s0-s15:c0.c1023 ->  (userrange {uname}_u ((s0 ) (s15 (range c0 c1023))))
 # s0:c0 ->  (userrange {uname}_u ((s0 ) (s0 (c0))))
-
 mls_range = args.range
 mcs_range = ""
 # separate MCS portion
