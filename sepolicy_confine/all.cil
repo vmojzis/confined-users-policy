@@ -1,3 +1,5 @@
+(typeattribute login_confinedom)
+
 (optional confined_transition_userdomain_optional
     (typeattributeset cil_gen_require init_t)
     (typeattributeset cil_gen_require xdm_t)
@@ -9,6 +11,7 @@
     (allow login_confinedom xdm_t (fifo_file (ioctl read write getattr lock append open)))
     (allow login_confinedom xdm_t (process (sigchld)))
 )
+
 (optional confined_xsession_spec_domtrans_conf_users_optional
     (typeattributeset cil_gen_require init_t)
     (typeattributeset cil_gen_require xdm_t)
